@@ -1,0 +1,188 @@
+---
+title: "Dominance Experiment"
+subtitle: "Analysis"
+author: "Dean Baltiansky"
+output: html_document
+---
+
+```{r,include=FALSE}
+detachAllPackages <- function() {
+
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+
+  package.list <- setdiff(package.list,basic.packages)
+
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+
+}
+
+detachAllPackages()
+```
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+base_url <- "https://raw.githubusercontent.com/deanbaltiansky/ab-testing-managerial-dominance/main/data/"
+file <- "dom_experiment_clean.csv"
+
+df <- readr::read_csv(file.path(base_url, file))
+
+```
+
+# Participants
+
+## Eligibility
+
+```{r,echo=FALSE,results='asis',warning=FALSE,message=F}
+total_n <- df %>% 
+  nrow()
+```
+
+Total N = **`r total_n`**.\
+\
+Check 1 (attention): *One should always select Somewhat Agree for this question*\
+Check 2 (bot check): Bots and humans see different prompts. Only a bot would insert this as a response: 14285733.
+
+```{r,echo=FALSE,results='asis',warning=FALSE,message=F,fig.align='left'}
+df %>% 
+  group_by(att_1,att_2) %>% 
+  summarise(N = n()) %>% 
+  arrange(desc(N)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+```{r,echo=FALSE,results='asis',warning=FALSE,message=F}
+df_elg <- df %>% 
+  filter(is_elg == 1) %>% 
+    mutate(income = factor(income,c("$0-$20,000",
+                                  "$20,001-$40,000",
+                                  "$40,001-$60,000",
+                                  "$60,001-$80,000",
+                                  "$80,001-$100,000",
+                                  "$100,001-$120,000",
+                                  "$120,001-$140,000",
+                                  "$140,001-$160,000",
+                                  "$160,001-$180,000",
+                                  "$180,001-$200,000",
+                                  "Over $200,000")),
+         edu = factor(edu,c("noHS",
+                            "GED",
+                            "2yearColl",
+                            "4yearColl",
+                            "MA",
+                            "PHD")),
+         income_num = as.numeric(income),
+         cond_num = ifelse(cond == "pos",1,0))
+
+eligible_n = df_elg %>% 
+  nrow()
+```
+
+Eligible N = **`r eligible_n`**.
+
+## Race/Ethnicity
+
+```{r,results='asis',echo=TRUE,warning=FALSE,message=FALSE}
+df_elg %>% 
+  group_by(race) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
+  ungroup() %>% 
+  arrange(desc(Perc)) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Gender
+
+```{r,echo=TRUE,results='asis',warning=FALSE}
+df_s1_elg %>% 
+  mutate(gender = ifelse(is.na(gender) | gender == "","other",gender)) %>% 
+  group_by(gender) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
+  ungroup() %>% 
+  arrange(desc(Perc)) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Age
+
+```{r,echo=TRUE,results='asis',warning=FALSE}
+df_s1_elg %>% 
+  summarise(age_mean = round(mean(age,na.rm = T),2),
+            age_sd = round(sd(age,na.rm = T),2)) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Education
+
+```{r,echo=TRUE,results='asis',warning=FALSE}
+df_s1_elg %>% 
+  group_by(edu) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Income
+
+```{r,fig.align='left',echo=TRUE,warning=FALSE,fig.dim=c(5,3)}
+median_income_num <- df_s1_elg %>% 
+  summarise(median = median(income_num,na.rm = T))
+
+median_income <- median_income_num %>% 
+  mutate(income_char = case_when(median == 1 ~ "$0-$20,000",
+                                 median == 2 ~ "$20,001-$40,000",
+                                 median == 3 ~ "$40,001-$60,000",
+                                 median == 4 ~ "$60,001-$80,000",
+                                 median == 5 ~ "$80,001-$100,000",
+                                 median == 6 ~ "$100,001-$120,000",
+                                 median == 7 ~ "$120,001-$140,000",
+                                 median == 8 ~ "$140,001-$160,000",
+                                 median == 9 ~ "$160,001-$180,000",
+                                 median == 10 ~ "$180,001-$200,000",
+                                 median == 11 ~ "Over $200,000")) %>% 
+  select(income_char) %>% 
+  unlist() %>% 
+  unname()
+
+df_s1_elg %>%
+  ggplot(aes(x = income, fill = income == median_income)) +
+  geom_bar(show.legend = FALSE) +
+  scale_fill_manual(values = c("FALSE" = "grey66", "TRUE" = "red")) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_line(color = "grey66"),
+        axis.text.y = element_text(color = "black"),
+        axis.text.x = element_text(color = "black",
+                                   face = "bold"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  coord_flip()
+```
+
+Median income: **`r median_income`**.

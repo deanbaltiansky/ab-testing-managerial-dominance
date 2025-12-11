@@ -52,13 +52,15 @@ when more than one race -> change to multiracial
 
 ```{r}
 df <- df %>% 
+  mutate_at(vars(race_1:race_6),function(x){ifelse(is.na(x),"",x)}) %>% 
   mutate(race_num_1 = ifelse(race_1 != "",1,0),
          race_num_2 = ifelse(race_2 != "",1,0),
          race_num_3 = ifelse(race_3 != "",1,0),
          race_num_4 = ifelse(race_4 != "",1,0),
-         race_num = race_num_1 + race_num_2 + race_num_3 + race_num_4,
-         race = ifelse(race_num > 1,"multiracial",paste0(race_1,race_2,race_3,race_4)),
-         race = ifelse(race == "",NA,race))
+         race_num_5 = ifelse(race_5 != "",1,0),
+         race_num = race_num_1 + race_num_2 + race_num_3 + race_num_4 + race_num_5,
+         race = ifelse(race_num > 1,"multiracial",paste0(race_1,race_2,race_3,race_4,race_5)),
+         race = ifelse(race == "","other",race)) 
 ```
 
 employment
