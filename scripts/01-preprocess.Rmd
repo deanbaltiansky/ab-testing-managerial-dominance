@@ -27,7 +27,209 @@ library(tidyverse)
 base_url <- "https://raw.githubusercontent.com/deanbaltiansky/ab-testing-managerial-dominance/main/data/"
 file <- "dom_experiment_raw.csv"
 
-df <- readr::read_csv(file.path(base_url, file))
+df_raw <- readr::read_csv(file.path(base_url, file))
 
+```
+
+remove ineligible participants
+
+```{r}
+#keep only those who finished
+df <- df_raw %>%
+  filter(Finished == 1) %>%
+  filter(Progress == 100) %>%
+  filter(intro == 4)
+```
+
+Put NA's where necessary
+
+```{r}
+df <- df %>% 
+  mutate(income = ifelse(income == "Prefer not to answer",NA,income))
+```
+
+when more than one race -> change to multiracial
+
+```{r}
+df <- df %>% 
+  mutate(race_num_1 = ifelse(race_1 != "",1,0),
+         race_num_2 = ifelse(race_2 != "",1,0),
+         race_num_3 = ifelse(race_3 != "",1,0),
+         race_num_4 = ifelse(race_4 != "",1,0),
+         race_num = race_num_1 + race_num_2 + race_num_3 + race_num_4,
+         race = ifelse(race_num > 1,"multiracial",paste0(race_1,race_2,race_3,race_4)),
+         race = ifelse(race == "",NA,race))
+```
+
+employment
+
+```{r}
+df <- df %>% 
+  mutate(employment = ifelse(Employment_1 == "Full-time",Employment_1,
+                             ifelse(Employment_2 == "Part-time",Employment_2,"")),
+         employ_char_3 = ifelse(is.na(Employment_3) | Employment_3 == "","",
+                                ifelse(employment == "",Employment_3,
+                                       paste0(", ",Employment_3))),
+         employ_char_4 = ifelse(is.na(Employment_4) | Employment_4 == "","",
+                                ifelse(employment == "",Employment_4,
+                                       paste0(", ",Employment_4))),
+         employ_char_5 = ifelse(is.na(Employment_5) | Employment_5 == "","",
+                                ifelse(employment == "",Employment_5,
+                                       paste0(", ",Employment_5))),
+         employ_char_6 = ifelse(is.na(Employment_6) | Employment_6 == "","",
+                                ifelse(employment == "",Employment_6,
+                                       paste0(", ",Employment_6))),
+         employ_char_7 = ifelse(is.na(Employment_7) | Employment_7 == "","",
+                                ifelse(employment == "",Employment_7,
+                                       paste0(", ",Employment_7))),
+         employ_char_8 = ifelse(is.na(Employment_8) | Employment_8 == "","",
+                                ifelse(employment == "",Employment_8,
+                                       paste0(", ",Employment_8))),
+         employ_char_9 = ifelse(is.na(Employment_9) | Employment_9 == "","",
+                                ifelse(employment == "",Employment_9,
+                                       paste0(", ",Employment_9))),
+         employment = paste0(employment,employ_char_3,employ_char_4,employ_char_5,employ_char_6,employ_char_7,employ_char_8,employ_char_9))
+```
+
+define income and edu as factors
+
+```{r}
+df <- df %>% 
+  mutate(income = factor(income,c("$0-$20,000",
+                                  "$20,001-$40,000",
+                                  "$40,001-$60,000",
+                                  "$60,001-$80,000",
+                                  "$80,001-$100,000",
+                                  "$100,001-$120,000",
+                                  "$120,001-$140,000",
+                                  "$140,001-$160,000",
+                                  "$160,001-$180,000",
+                                  "$180,001-$200,000",
+                                  "Over $200,000")),
+         edu = factor(edu,c("noHS",
+                            "GED",
+                            "2yearColl",
+                            "4yearColl",
+                            "MA",
+                            "PHD")))
+```
+
+reverse-score items
+
+```{r}
+df <- df %>% 
+  mutate(CWV_2R = 8 - CWV_2,
+         CWV_5R = 8 - CWV_5,
+         CWV_7R = 8 - CWV_7,
+         CWV_9R = 8 - CWV_9,
+         CWV_10R = 8 - CWV_10)
+```
+
+mean scores
+
+```{r}
+df <- df %>% 
+  rowwise() %>% 
+  mutate(CWV = mean(c(CWV_1,
+                      CWV_2R,
+                      CWV_3,
+                      CWV_4,
+                      CWV_5R,
+                      CWV_6,
+                      CWV_7R,
+                      CWV_8,
+                      CWV_9R,
+                      CWV_10R))) %>% 
+  ungroup()
+```
+
+fixing and renaming some variables
+
+```{r}
+df <- df %>% 
+  mutate(reflection = ifelse(cond == "pos",cond_pos,cond_neg),
+         pred_choice = ifelse(message_choice == 1,choice_dom,choice_nondom),
+         pred_comp = ifelse(message_choice == 1,comp_dom_1,comp_nondom_1),
+         pred_att = ifelse(message_choice == 1,attitude_dom,attitude_nondom),
+         choicedom = ifelse(message_choice == 2,0,1),
+         pred_choice = ifelse(pred_choice == 1,"do","skip"),
+         message_choice = ifelse(message_choice == 1,"dom","nondom"))
+```
+
+create continuous preference dv
+
+```{r}
+df <- df %>% 
+  mutate(pref_dom = preference,
+         pref_nondom = case_when(preference == 4 ~ 3,
+                                 preference == 5 ~ 2,
+                                 preference == 6 ~ 1,
+                                 .default = NA),
+         pref_cont = ifelse(message_choice == "dom",pref_dom,pref_nondom))
+```
+
+
+attention check #1
+
+```{r}
+df <- df %>% 
+  mutate(att_1 = ifelse(check_1 == 5,1,0))
+```
+
+attention check #2
+
+```{r}
+df <- df %>% 
+  mutate(att_2 = ifelse(check_2 == 14285733,0,1))
+```
+
+eligibility
+
+```{r}
+df <- df %>% 
+  mutate(is_elg = ifelse(att_1 == 1 & att_2 == 1,1,0))
+```
+
+taking only necessary variables
+
+```{r}
+df <- df %>% 
+  dplyr::select(PID,
+                cond,
+                reflection,
+                choicedom,
+                message_choice,
+                pref_cont,
+                CWV,
+                pred_choice,
+                pred_comp,
+                pred_att,
+                keep_1:keep_10,
+                CWV_1,
+                CWV_2R,
+                CWV_3,
+                CWV_4,
+                CWV_5R,
+                CWV_6,
+                CWV_7R,
+                CWV_8,
+                CWV_9R,
+                CWV_10R,
+                att_1,
+                att_2,
+                is_elg,
+                age,
+                race,
+                edu,
+                income,
+                gender,
+                employment,
+                feedback)
+```
+
+write out clean csv
+
+```{r}
+write.csv(df,"dom_experiment_clean.csv",row.names = F)
 ```
 
