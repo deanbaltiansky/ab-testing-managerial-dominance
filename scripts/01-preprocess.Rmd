@@ -1,0 +1,33 @@
+---
+title: "Dominance Experiment"
+subtitle: "data cleaning"
+author: "Dean Baltiansky"
+output: html_document
+---
+
+```{r,include=FALSE}
+detachAllPackages <- function() {
+
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+
+  package.list <- setdiff(package.list,basic.packages)
+
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+
+}
+
+detachAllPackages()
+```
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+base_url <- "https://raw.githubusercontent.com/deanbaltiansky/ab-testing-managerial-dominance/main/data/"
+file <- "dom_experiment_raw.csv"
+
+df <- readr::read_csv(file.path(base_url, file))
+
+```
+
