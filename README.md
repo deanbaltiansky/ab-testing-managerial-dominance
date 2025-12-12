@@ -1,5 +1,5 @@
 # ab-testing-managerial-dominance
-A/B test examining how relational expectations shape leaders’ communication choices
+A/B test examining how relationship expectations shape leaders’ communication choices
 
 # Overview
 
