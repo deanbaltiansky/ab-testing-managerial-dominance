@@ -1,15 +1,19 @@
 # ab-testing-managerial-dominance
-A/B test analyzing how relational expectations influence leaders’ likelihood of choosing a more dominant communication option.
+A/B test examining how relational expectations shape leaders’ communication choices
 
 # Overview
 
-This repository contains the experimental design and analysis for a randomized A/B test examining how expected relationship impact of dominance (positive vs. negative) influences leaders' choice of a dominant communication option. This study is part a broader project on the unique role of relationship expectancies in how managers' competitive worldview impacts their dominant behavior at work. Here, I show that relationship expectancies not only explain the effect correlationally, but also lead to more dominant behavior experimentally.
+This repository contains the design and analysis of a randomized A/B experiment testing whether leaders’ expectations about relationship consequences influence their likelihood of choosing a more dominant communication style.
+
+Participants were randomly assigned to reflect on either the positive or negative relationship impact of a dominant message before making a real communication choice. The analysis shows that framing dominance as relationally beneficial—rather than harmful—causally increases leaders’ willingness to use dominant communication, even when financial incentives are held constant.
+
+The repo demonstrates a clean, industry-relevant A/B testing workflow with a binary behavioral outcome, grounded in realistic managerial decision-making.
 
 # Experimental design
 
-Online participants (N = 492) were instructed to act as managers in a mid-sized company. They were told they needed to assign a challenging task to an employee—another participant on the platform—whose performance would determine the manager’s bonus (up to $1 in addition to a base pay of $1.60). Importantly, the manager had power over the employee in that they determined their bonus (up to $1 as well).
+Online participants (N = 492) were instructed to act as managers in a mid-sized company. They were told to assign a challenging task to an employee (another participant on the platform) whose performance affected both parties’ bonuses.
 
-Before choosing how to communicate about the task, participants were randomly assigned to one of two conditions:
+Before choosing how to communicate about the task, managers were randomly assigned to one of two conditions:
 
   1. Positive Relationship Impact Condition: Participants reflected on how the employee might react **positively** to a dominant message.
   2. Negative Relationship Impact Condition: Participants reflected on how the employee might react **negatively** to a dominant message.
@@ -19,19 +23,39 @@ All participants were then shown two possible messages they could send to the em
   1. a dominant communication option, and
   2. a non-dominant communication option.
 
-The primary dependent variable was which message they chose to send (0 = non-dominant, 1 = dominant).
+The primary dependent variable was whether the manager selected the dominant message (0 = non-dominant, 1 = dominant).
 
-This design allows for a clear estimate of how relational expectations shape leaders’ communication decisions.
+# Validation and analysis approach
+
+To verify that the manipulation worked as intended and to rule out alternative explanations, the analysis includes:
+
+  - Treatment checks
+    - Self-reported expected employee reactions
+    Lexical sentiment analysis (AFINN) of open-ended reflections
+    Word-count comparisons to ensure equivalent engagement across conditions
+  - Primary outcome analysis
+    - Difference-in-means and logistic regression (binary choice outcome)
+    - Effect sizes reported as odds ratios and probability differences
+  - Robustness checks
+    - Controlling for expected task compliance to isolate relational framing effects
+
+All analyses are fully reproducible and run directly from the de-identified dataset included in the repo.
 
 # Why this matters
 
-Organizations often need to understand how expectations, framing, and communication context influence leaders’ behavior. This repository illustrates how to analyze experimental data in a managerial decision-making scenario, using standard A/B testing methods and a binary behavioral outcome.
+In organizations, leaders frequently face choices about how to communicate—not just what to decide. This project shows that subtle shifts in how leaders think about relational consequences can meaningfully change their behavior, independent of incentives.
 
+From an analytics perspective, the repo illustrates how to:
+
+  - design and analyze a clean A/B experiment,
+  - validate manipulations using both survey and text data,
+  - estimate and communicate causal effects in a business-relevant context.
+  
 # What this repo shows
 
- - Designing and analyzing a randomized A/B experiment
- - Cleaning and structuring behavioral data for analysis
- - Estimating treatment effects with logistic regression and difference-in-means
- - Visualizing effect sizes and uncertainty
- - Communicating analytical results clearly and reproducibly
+  - Designing and analyzing a randomized A/B test
+  - Working with binary behavioral outcomes
+  - Validating experimental manipulations with text-based measures
+  - Estimating treatment effects using logistic regression
+  - Communicating results clearly and reproducibly for non-academic audiences
 

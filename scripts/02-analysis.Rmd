@@ -2,7 +2,11 @@
 title: "Dominance Experiment"
 subtitle: "Analysis"
 author: "Dean Baltiansky"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
 ---
 
 ```{r,include=FALSE}
@@ -23,6 +27,11 @@ detachAllPackages()
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(stringr)
+library(tidytext)
+library(kableExtra)
+library(papaja)
+library(effectsize)
 
 base_url <- "https://raw.githubusercontent.com/deanbaltiansky/ab-testing-managerial-dominance/main/data/"
 file <- "dom_experiment_clean.csv"
@@ -33,34 +42,42 @@ df <- readr::read_csv(file.path(base_url, file))
 
 # Participants
 
-## Eligibility
-
-```{r,echo=FALSE,results='asis',warning=FALSE,message=F}
+```{r,echo=TRUE,results='asis',warning=FALSE,message=F}
 total_n <- df %>% 
   nrow()
-```
 
-Total N = **`r total_n`**.\
-\
-Check 1 (attention): *One should always select Somewhat Agree for this question*\
-Check 2 (bot check): Bots and humans see different prompts. Only a bot would insert this as a response: 14285733.
-
-```{r,echo=FALSE,results='asis',warning=FALSE,message=F,fig.align='left'}
-df %>% 
-  group_by(att_1,att_2) %>% 
-  summarise(N = n()) %>% 
-  arrange(desc(N)) %>% 
-  ungroup() %>% 
-  kbl() %>% 
-  kable_styling(bootstrap_options = "hover",
-                full_width = F,
-                position = "left")
-```
-
-```{r,echo=FALSE,results='asis',warning=FALSE,message=F}
 df_elg <- df %>% 
-  filter(is_elg == 1) %>% 
-    mutate(income = factor(income,c("$0-$20,000",
+  filter(is_elg == 1) 
+
+eligible_n = df_elg %>% 
+  nrow()
+
+n_white <- df_elg %>% 
+  group_by(race) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(race == "white") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+n_man <- df_elg %>% 
+  mutate(gender = ifelse(is.na(gender) | gender == "","other",gender)) %>% 
+  group_by(gender) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(gender == "man") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+mean_age <- df_elg %>% 
+  summarise(age_mean = round(mean(age,na.rm = T),2)) %>% 
+  unlist() %>% 
+  unname()
+
+median_income_num <- df_elg %>% 
+  mutate(income = factor(income,c("$0-$20,000",
                                   "$20,001-$40,000",
                                   "$40,001-$60,000",
                                   "$60,001-$80,000",
@@ -71,85 +88,7 @@ df_elg <- df %>%
                                   "$160,001-$180,000",
                                   "$180,001-$200,000",
                                   "Over $200,000")),
-         edu = factor(edu,c("noHS",
-                            "GED",
-                            "2yearColl",
-                            "4yearColl",
-                            "MA",
-                            "PHD")),
-         income_num = as.numeric(income),
-         cond_num = ifelse(cond == "pos",1,0))
-
-eligible_n = df_elg %>% 
-  nrow()
-```
-
-Eligible N = **`r eligible_n`**.
-
-## Race/Ethnicity
-
-```{r,results='asis',echo=TRUE,warning=FALSE,message=FALSE}
-df_elg %>% 
-  group_by(race) %>% 
-  summarise(N = n()) %>% 
-  ungroup() %>% 
-  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
-  ungroup() %>% 
-  arrange(desc(Perc)) %>% 
-  kbl() %>% 
-  kable_styling(bootstrap_options = "hover",
-                full_width = F,
-                position = "left")
-```
-
-## Gender
-
-```{r,echo=TRUE,results='asis',warning=FALSE}
-df_s1_elg %>% 
-  mutate(gender = ifelse(is.na(gender) | gender == "","other",gender)) %>% 
-  group_by(gender) %>% 
-  summarise(N = n()) %>% 
-  ungroup() %>% 
-  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
-  ungroup() %>% 
-  arrange(desc(Perc)) %>% 
-  kbl() %>% 
-  kable_styling(bootstrap_options = "hover",
-                full_width = F,
-                position = "left")
-```
-
-## Age
-
-```{r,echo=TRUE,results='asis',warning=FALSE}
-df_s1_elg %>% 
-  summarise(age_mean = round(mean(age,na.rm = T),2),
-            age_sd = round(sd(age,na.rm = T),2)) %>% 
-  kbl() %>% 
-  kable_styling(bootstrap_options = "hover",
-                full_width = F,
-                position = "left")
-```
-
-## Education
-
-```{r,echo=TRUE,results='asis',warning=FALSE}
-df_s1_elg %>% 
-  group_by(edu) %>% 
-  summarise(N = n()) %>% 
-  ungroup() %>% 
-  mutate(Perc = round(100*(N/sum(N)),2)) %>% 
-  ungroup() %>% 
-  kbl() %>% 
-  kable_styling(bootstrap_options = "hover",
-                full_width = F,
-                position = "left")
-```
-
-## Income
-
-```{r,fig.align='left',echo=TRUE,warning=FALSE,fig.dim=c(5,3)}
-median_income_num <- df_s1_elg %>% 
+         income_num = as.numeric(income)) %>% 
   summarise(median = median(income_num,na.rm = T))
 
 median_income <- median_income_num %>% 
@@ -167,22 +106,434 @@ median_income <- median_income_num %>%
   select(income_char) %>% 
   unlist() %>% 
   unname()
+```
 
-df_s1_elg %>%
-  ggplot(aes(x = income, fill = income == median_income)) +
-  geom_bar(show.legend = FALSE) +
-  scale_fill_manual(values = c("FALSE" = "grey66", "TRUE" = "red")) +
+I recruited **`r total_n`** participants from Connect by CloudResearch (online U.S. panel) on May 27th, 2025. After preregistered attention and bot checks, **`r eligible_n`** eligible participants remained the final sample (*N* white = `r n_white`; *N* men = `r n_man`; *M* age = `r mean_age`; *Median* income = `r median_income`).
+
+# Treatment
+
+All participants saw both the the dominant message and the non-dominant message:
+
+**Dominant Message**
+
+*By now you know the task at hand. It’s time to get in there and do your absolute best across all rounds. If you don’t complete it and do it well, you will not get the full bonus.*
+
+**Non-Dominant Message**
+
+*Your job in this task is to select the shapes that match the description. Please make sure you look at them carefully. It would be great if you can get as many of them right as possible.*
+
+Those in the *Positive Relationship Impact Condition* were told to reflect on how the employee might react **positively** to the dominant message, whereas those in the *Negative Relationship Impact Condition* were told to reflect on how the employee might react **negatively** to the dominant message. 
+
+*Before you make your choice of which message you want to send, think for a moment about how your employee might react [positively/negatively] to this message:*
+
+[dominant message]
+
+*How and why might the employee have a positive/negative (or at least not negative/positive) reaction to that message, affecting their attitude towards the manager?*
+
+*In the space below, please write 1-2 sentences about positive thoughts or feelings they could have about the manager and their relationship with them.*
+
+## Treatment check
+
+I validated that participants engaged with the treatment in the way I intended: (1) a single-item self-report on the expected employee attitude toward them; (2) a lexical valence analysis of the open-ended responses; and (3) a word count, by condition, to make sure that they engaged with both prompts similarly.
+
+### (1) Self-report item
+
+Immediately after the treatment, participants estimated the employee's attitude toward them if they were to send the dominant message (1 = *Extremely Negative* to 7 = *Extremely Positive*).
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+df_elg <- df_elg %>% 
+  mutate(cond = factor(cond,levels = c("pos","neg")))
+
+df_elg %>% 
+  group_by(cond) %>% 
+  summarise(N = n(),
+            Mean = round(mean(pred_att,na.rm = T),2),
+            SD = round(sd(pred_att,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m <- t.test(pred_att ~ cond,data = df_elg)
+d_mod <- cohens_d(m)
+d = d_mod[1,1]
+```
+
+Confirming that the manipulation shifted relational expectations as intended, participants in the *Positive Relationship Impact Condition* expected a more positive reaction to the dominant message than those in the *Negative Relationship Impact Condition* (*t*(`r round(m$parameter,2)`) = `r round(m$statistic,2)`, *p* = `r round(m$p.value,3)`, *Lower CI* = `r round(m$conf.int[1],2)`, *Upper CI* = `r round(m$conf.int[2],2)`, *d* = `r round(d,2)`).
+
+### (2) Lexical valence analysis
+
+First, these are the top-10 most frequent sentiment-scored words (AFINN), by condition:
+
+**Positive Relationship Impact Condition**
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+afinn <- get_sentiments("afinn")
+
+df_elg %>% 
+  select(PID,cond,reflection) %>% 
+  unnest_tokens(word,reflection) %>% 
+  inner_join(afinn,by = "word") %>% 
+  group_by(cond,word) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  arrange(cond,desc(n)) %>% 
+  group_by(cond) %>% 
+  slice(1:10) %>% 
+  ungroup() %>% 
+  filter(cond == "pos") %>% 
+  select(-cond) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+**Negative Relationship Impact Condition**
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+df_elg %>% 
+  select(PID,cond,reflection) %>% 
+  unnest_tokens(word,reflection) %>% 
+  inner_join(afinn,by = "word") %>% 
+  group_by(cond,word) %>% 
+  summarise(n = n()) %>% 
+  ungroup() %>% 
+  arrange(cond,desc(n)) %>% 
+  group_by(cond) %>% 
+  slice(1:10) %>% 
+  ungroup() %>% 
+  filter(cond == "neg") %>% 
+  select(-cond) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+
+Now, let's compare the valence of the two conditions. To that end, each participant will get a valence score based on the sum of valence scores for detectable words (those in the AFINN lexicon that they used). As opposed to taking the mean, this accounts for the number of sentiment-bearing words used and reflects the overall sentiment of the response better. Those who did not use any detectable words are dropped from this analysis. Below are the mean sum scores per condition.
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+PID_valence <- df_elg %>% 
+  select(PID,cond,reflection) %>% 
+  unnest_tokens(word,reflection) %>% 
+  inner_join(afinn,by = "word") %>% 
+  group_by(PID) %>% 
+  summarise(value = sum(value)) %>% 
+  ungroup()
+
+remaining_pos <- df_elg %>% 
+  select(PID,cond) %>% 
+  inner_join(PID_valence,by = "PID") %>% 
+  group_by(cond) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(cond == "pos") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+remaining_neg <- df_elg %>% 
+  select(PID,cond) %>% 
+  inner_join(PID_valence,by = "PID") %>% 
+  group_by(cond) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(cond == "neg") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+total_pos <- df_elg %>% 
+  select(PID,cond) %>% 
+  group_by(cond) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(cond == "pos") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+total_neg <- df_elg %>% 
+  select(PID,cond) %>% 
+  group_by(cond) %>% 
+  summarise(N = n()) %>% 
+  ungroup() %>% 
+  filter(cond == "neg") %>% 
+  select(N) %>% 
+  unlist() %>% 
+  unname()
+
+perc_overall = round(100*nrow(PID_valence)/eligible_n,2)
+perc_pos = round(100*remaining_pos/total_pos,2)
+perc_neg = round(100*remaining_neg/total_neg,2)
+
+
+df_elg %>% 
+  select(PID,cond) %>% 
+  inner_join(PID_valence,by = "PID") %>% 
+  group_by(cond) %>% 
+  summarise(N = n(),
+            Mean = round(mean(value),2),
+            SD = round(sd(value),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+This analysis covers participants who used at least one word present in the AFINN lexicon (`r perc_overall`% of total reflections; `r perc_pos`% of positive condition reflections; `r perc_neg`% of negative condition reflections).
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m <- t.test(value ~ cond,data = df_elg %>% 
+  select(PID,cond) %>% 
+  inner_join(PID_valence,by = "PID"))
+
+d_mod <- cohens_d(m)
+d = d_mod[1,1]
+```
+
+Indeed, those in the *Positive Relationship Impact Condition* responded using more positively valenced language on average than those in the *Negative Relationship Impact Condition* (*t*(`r round(m$parameter,2)`) = `r round(m$statistic,2)`, *p* = `r round(m$p.value,3)`, *Lower CI* = `r round(m$conf.int[1],2)`, *Upper CI* = `r round(m$conf.int[2],2)`, *d* = `r round(d,2)`).
+
+### (3) Word-count
+
+I also wanted to make sure that participants in the two conditions did not differ too much in the length of their response. To that end, I calculate and compare the word-count of each reflection and compare the two conditions. 
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+PID_wordcount <- df_elg %>%
+  transmute(PID,
+            n_words = str_count(str_squish(reflection), "\\S+"))
+
+df_elg %>% 
+  select(PID,cond) %>% 
+  left_join(PID_wordcount,by = "PID") %>% 
+  group_by(cond) %>% 
+  summarise(Mean = round(mean(n_words),2),
+            SD = round(sd(n_words),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m <- t.test(n_words ~ cond,data = df_elg %>% 
+  select(PID,cond) %>% 
+  left_join(PID_wordcount,by = "PID"))
+
+d_mod <- cohens_d(m)
+d = d_mod[1,1]
+```
+
+Indeed, the difference in word-count between participants in the *Positive Relationship Impact Condition* and participants in the  *Negative Relationship Impact Condition* is not statistically significant (*t*(`r round(m$parameter,2)`) = `r round(m$statistic,2)`, *p* = `r round(m$p.value,3)`, *Lower CI* = `r round(m$conf.int[1],2)`, *Upper CI* = `r round(m$conf.int[2],2)`, *d* = `r round(d,2)`), suggesting that participants in both conditions engaged with the treatment similarly. Because response lengths were similar across conditions, sum-based valence is less likely to be mechanically driven by length of response.
+
+# Primary DV
+
+After the treatment, participants were asked which message they want to send to the employees. These are the ratios, within each condition, of sending the dominant message to the employee.
+
+## Descriptives
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+pos_share <- df_elg %>% 
+  group_by(cond) %>% 
+  summarise(Share = round(100*mean(choicedom,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  filter(cond == "pos") %>% 
+  select(Share) %>% 
+  unlist() %>% 
+  unname()
+
+neg_share <- df_elg %>% 
+  group_by(cond) %>% 
+  summarise(Share = round(100*mean(choicedom,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  filter(cond == "neg") %>% 
+  select(Share) %>% 
+  unlist() %>% 
+  unname()
+
+df_elg %>% 
+  group_by(cond) %>% 
+  summarise(N = n(),
+            Mean = round(100*mean(choicedom,na.rm = T),2),
+            SD = round(100*sd(choicedom,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Logistic Regression
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m1 <- glm(choicedom ~ cond, family = binomial(link = "logit"),df_elg %>% mutate(cond = factor(cond,levels = c("neg","pos"))))
+
+ci_low = confint(m1)[2,1]
+or_ci_low <- exp(ci_low)
+ci_high = confint(m1)[2,2]
+or_ci_high <- exp(ci_high)
+
+apa_lm <- apa_print(m1)
+ 
+kbl(apa_lm$table) %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+
+
+```
+
+A logistic regression indicates that participants in the *Positive Relationship Impact Condition* were **`r round(exp(m1$coefficients["condpos"]), 2)`** times more likely to send the dominant message than those in the *Negative Relationship Impact Condition* (odds ratio; logit coefficient = `r round(m1$coefficients["condpos"], 2)`; 95% CI = [`r round(or_ci_low,2)`, `r round(or_ci_high,2)`]).
+
+In probability terms, the share choosing the dominant message increased from **`r neg_share`%** in the *Negative Relationship Impact Condition* to **`r pos_share`%** in the *Positive Relationship Impact Condition*.
+
+```{r,fig.align='left',echo=TRUE,warning=FALSE,message=FALSE,fig.dim=c(6,4)}
+fig1 <- df_elg %>% 
+  mutate(cond_char = ifelse(cond == "pos","Positive Relationship\nImpact Condition","Negative Relationship\nImpact Condition")) %>% 
+  ggplot(aes(x = cond_char,y = choicedom)) +
+  stat_summary(fun.data = "mean_cl_boot",
+               size = 0.5,
+               geom = "errorbar",
+               width = 0.05,
+               color = "#080807",
+               position = position_nudge(0)) +
+  stat_summary(fun = "mean",
+               geom = "point",
+               size = 2.3,
+               fill = "black",
+               color = "black",
+               position = position_nudge(0)) +
+  stat_summary(fun = "mean",
+               shape = 1,
+               geom = "point",
+               color = "black",
+               fill = "black",
+               position = position_nudge(0)) +
+  scale_y_continuous(limits = c(-.02,1.02),
+                     breaks = seq(0,1,0.2),
+                     labels = c("0%","20%","40%","60%","80%","100%")) +
+  ylab("Share Who Sent\n the Dominant Message") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.background = element_blank(),
+        panel.grid.major.y = element_line(color = "grey80",
+                                          linetype = "dashed"),
         axis.ticks = element_blank(),
         axis.line = element_line(color = "grey66"),
-        axis.text.y = element_text(color = "black"),
         axis.text.x = element_text(color = "black",
-                                   face = "bold"),
+                                   face = "bold",
+                                   size = 12),
+        axis.text.y = element_text(color = "grey30",
+                                   size = 10),
+        axis.title.y = element_text(color = "black",
+                                   face = "bold",
+                                   size = 12),
         axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  coord_flip()
+        legend.position = "none",
+        title = element_text(color = "black",
+                             size = 12,
+                             face = "bold"))
+
+#png("treatment_effect.png",width = 360,height = 320,units = "px")
+fig1
 ```
 
-Median income: **`r median_income`**.
+# Secondary DV
+
+To increase variance and offer potential nuance to the treatment effect, I created a continuous dependent variable as well: preference for selected message. After selecting the message, participants indicated the extent to which they preferred the message they selected (1 = *Slightly preferred* to 3 = *Strongly preferred*). Later, I coded this response, in combination with the message selection response, as a 6-point dominance scale (1 = *Strongly preferred the non-dominant message* to 6 = *Strongly preferred the dominant message*).
+
+## Descriptives
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+df_elg %>% 
+  group_by(cond) %>% 
+  summarise(N = n(),
+            Mean = round(mean(pref_cont,na.rm = T),2),
+            SD = round(sd(pref_cont,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Two-sample t-test
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m <- t.test(pref_cont ~ cond,data = df_elg)
+d_mod <- cohens_d(m)
+d = d_mod[1,1]
+```
+\
+*t*(`r round(m$parameter,2)`) = `r round(m$statistic,2)`, *p* = `r round(m$p.value,3)`, *Lower CI* = `r round(m$conf.int[1],2)`, *Upper CI* = `r round(m$conf.int[2],2)`, *d* = `r round(d,2)`.
+
+Results were consistent when using a continuous 6-point preference scale as the outcome rather than a simple binary choice.
+
+# Robustness check
+
+To make sure that the treatment effect is not driven by expected compliance, we also asked participants to indicate how much of the task they believe the employee will complete if they were to receive the dominant message (0 = *minimum score on the task* to 50 = *maximum score on the task*). This, after all, could be the main motivator for message selection because it directly impacts participants' bonus.
+
+## Descriptives
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+df_elg %>% 
+  group_by(cond) %>% 
+  summarise(N = n(),
+            Mean = round(mean(pred_comp,na.rm = T),2),
+            SD = round(sd(pred_comp,na.rm = T),2)) %>% 
+  ungroup() %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+```
+
+## Two-sample t-test
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m <- t.test(pred_comp ~ cond,data = df_elg)
+d_mod <- cohens_d(m)
+d = d_mod[1,1]
+```
+
+*t*(`r round(m$parameter,2)`) = `r round(m$statistic,2)`, *p* = `r round(m$p.value,3)`, *Lower CI* = `r round(m$conf.int[1],2)`, *Upper CI* = `r round(m$conf.int[2],2)`, *d* = `r round(d,2)`.
+
+Indeed, there is a treatment effect of condition on expected compliance. Let's add it as a control variable to the logistic regression model.
+
+## Logistic Regression
+
+```{r,echo=TRUE,results='asis',warning=FALSE,message=FALSE}
+m2 <- glm(choicedom ~ cond + pred_comp, family = binomial(link = "logit"),df_elg %>% mutate(cond = factor(cond,levels = c("neg","pos"))))
+
+ci_low = confint(m2)[2,1]
+or_ci_low <- exp(ci_low)
+ci_high = confint(m2)[2,2]
+or_ci_high <- exp(ci_high)
+
+apa_lm <- apa_print(m2)
+ 
+kbl(apa_lm$table) %>% 
+  kable_styling(bootstrap_options = "hover",
+                full_width = F,
+                position = "left")
+
+
+```
+
+Controlling for predicted compliance, the condition effect on message selection remained strong and statistically significant. In the adjusted model, participants in the *Positive Relationship Impact Condition* were **`r round(exp(m2$coefficients["condpos"]), 2)`** times more likely to send the dominant message than those in the *Negative Relationship Impact Condition* (odds ratio; logit coefficient = `r round(m2$coefficients["condpos"], 2)`; 95% CI = [`r round(or_ci_low,2)`, `r round(or_ci_high,2)`]).
+
+# Summary & Takeaways
+
+  - The reflection manipulation successfully shifted relational expectations about how an employee might respond to a dominant message.
+  - This shift led to a substantially higher likelihood of sending the dominant message, with participants in the *Positive Relationship Impact Condition* **`r round(exp(m1$coefficients["condpos"]), 2)`** times more likely to select it than those in the *Negative Relationship Impact Condition*.
+  - The effect remained robust when controlling for expected task compliance and when using a continuous dominance-preference scale as the outcome.
+  - This analysis illustrates a typical A/B testing workflow with a binary behavioral outcome, including treatment checking, effect estimation, visualization, and robustness checks.
+  - The results highlight how framing leaders’ expectations about relational consequences can causally shift communication choices, even when financial incentives are held constant.
+
