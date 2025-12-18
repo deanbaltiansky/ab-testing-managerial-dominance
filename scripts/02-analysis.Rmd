@@ -108,7 +108,7 @@ median_income <- median_income_num %>%
   unname()
 ```
 
-I recruited **`r total_n`** participants from Connect by CloudResearch (online U.S. panel) on May 27th, 2025. After preregistered attention and bot checks, **`r eligible_n`** eligible participants remained the final sample (*N* white = `r n_white`; *N* men = `r n_man`; *M* age = `r mean_age`; *Median* income = `r median_income`).
+I recruited **`r total_n`** participants from Connect by CloudResearch (online U.S. panel) on May 27th, 2025. After preregistered attention and bot checks, **`r eligible_n`** eligible responses remained in the final sample (*N* white = `r n_white`; *N* men = `r n_man`; *M* age = `r mean_age`; *Median* income = `r median_income`).
 
 # Treatment
 
