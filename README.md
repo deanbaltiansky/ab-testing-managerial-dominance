@@ -1,6 +1,9 @@
 # ab-testing-managerial-dominance
 A/B test examining how relationship expectations shape leaders’ communication choices
 
+**Read the analysis report**
+https://deanbaltiansky.github.io/ab-testing-managerial-dominance/
+
 # Overview
 
 This repository contains the design and analysis of a randomized A/B experiment testing whether leaders’ expectations about relationship consequences influence their likelihood of choosing a more dominant communication style.
