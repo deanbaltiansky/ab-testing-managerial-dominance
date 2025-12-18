@@ -1,6 +1,13 @@
 # ab-testing-managerial-dominance
+<<<<<<< HEAD
 
 A/B test examining how relational expectations shape leaders’ communication choices
+=======
+A/B test examining how relationship expectations shape leaders’ communication choices
+
+**Read the analysis report**
+https://deanbaltiansky.github.io/ab-testing-managerial-dominance/
+>>>>>>> e9d8d75163d49fefb6605cf27ed84e8c0bab335b
 
 # Overview
 
