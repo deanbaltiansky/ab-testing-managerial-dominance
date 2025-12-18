@@ -40,6 +40,29 @@ df <- readr::read_csv(file.path(base_url, file))
 
 ```
 
+# Background
+
+<p>
+  <a href="https://github.com/deanbaltiansky/ab-testing-managerial-dominance">View code on GitHub</a>
+</p>
+
+This repository presents a **randomized A/B test** examining whether managers’ expectations about relationship consequences influence communication with employees.
+
+The core question is whether managers are more likely to send a dominant message, using coercion and threat, when they believe it will improve—rather than harm—their relationship with an employee. The goal is to isolate this mechanism using a clean experimental intervention and a concrete incentive-compatible behavioral decision.
+
+# Design Overview
+
+Participants were instructed to act as managers assigning a challenging task to an employee whose performance affected the manager’s bonus.
+
+Before making a communication choice, participants were randomly assigned to one of two conditions:
+
+  - Positive relationship impact: reflecting on the **positive** impact a dominant message will have on their relationship with the employee.
+  - Negative relationship impact: reflecting on the **negative** impact a dominant message will have on their relationship with the employee.
+
+All other elements of the scenario—including task demands, incentives, and message options—were held constant.
+
+As the primary outcome of the experiment, participants could send one of two messages to motivate the employee: a dominant message and a non-dominant message.
+
 # Participants
 
 ```{r,echo=TRUE,results='asis',warning=FALSE,message=F}
